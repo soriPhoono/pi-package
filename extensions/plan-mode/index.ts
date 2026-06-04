@@ -40,7 +40,7 @@
  */
 
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { Key, truncateToWidth } from "@earendil-works/pi-tui";
+import { Key, Text, truncateToWidth } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 import { StringEnum } from "@earendil-works/pi-ai";
 import type { AgentMessage } from "@earendil-works/pi-agent-core";
@@ -473,17 +473,17 @@ export default function planModeExtension(pi: ExtensionAPI): void {
 			if (step !== undefined) display += ` ${theme.fg("accent", `#${step}`)}`;
 			if (text) display += ` ${theme.fg("dim", `"${text.slice(0, 40)}"`)}`;
 
-			return { type: "text", text: display };
+			return new Text(display, 0, 0);
 		},
 
 		renderResult(result, options, theme, _context) {
 			const details = result.details;
 			if (!details) {
-				return { type: "text", text: result.content[0]?.text ?? "" };
+				return new Text(result.content[0]?.text ?? "", 0, 0);
 			}
 
 			if (details.error) {
-				return { type: "text", text: theme.fg("error", `Error: ${details.error}`) };
+				return new Text(theme.fg("error", `Error: ${details.error}`), 0, 0);
 			}
 
 			const action = details.action as string;
@@ -492,7 +492,7 @@ export default function planModeExtension(pi: ExtensionAPI): void {
 				case "list": {
 					const todos = details.todos as TodoItem[] | undefined;
 					if (!todos || todos.length === 0) {
-						return { type: "text", text: theme.fg("dim", "No plan items") };
+						return new Text(theme.fg("dim", "No plan items"), 0, 0);
 					}
 					const completed = todos.filter((t: TodoItem) => t.status === "completed").length;
 					const inProg = todos.filter((t: TodoItem) => t.status === "in_progress").length;
@@ -512,33 +512,33 @@ export default function planModeExtension(pi: ExtensionAPI): void {
 					const more = !options.expanded && todos.length > 10
 						? `\n${theme.fg("dim", `... ${todos.length - 10} more`)}`
 						: "";
-					return { type: "text", text: `${theme.fg("muted", status)}\n${lines}${more}` };
+					return new Text(`${theme.fg("muted", status)}\n${lines}${more}`, 0, 0);
 				}
 				case "add_step": {
 					const todoDetails = details.todo as TodoItem | undefined;
 					const stepNum = todoDetails?.step ?? "?";
-					return { type: "text", text: theme.fg("success", "✓ Added step ") + theme.fg("accent", `#${stepNum}`) };
+					return new Text(theme.fg("success", "✓ Added step ") + theme.fg("accent", `#${stepNum}`), 0, 0);
 				}
 				case "remove_step": {
 					const removedDetails = details.removed as TodoItem | undefined;
 					const stepNum = removedDetails?.step ?? "?";
-					return { type: "text", text: theme.fg("warning", "✗ Removed step ") + theme.fg("accent", `#${stepNum}`) };
+					return new Text(theme.fg("warning", "✗ Removed step ") + theme.fg("accent", `#${stepNum}`), 0, 0);
 				}
 				case "reorder_steps": {
 					const todos = details.todos as TodoItem[] | undefined;
-					return { type: "text", text: theme.fg("success", "✓ Reordered ") + theme.fg("accent", `${todos?.length ?? 0} steps`) };
+					return new Text(theme.fg("success", "✓ Reordered ") + theme.fg("accent", `${todos?.length ?? 0} steps`), 0, 0);
 				}
 				case "update_step":
-					return { type: "text", text: theme.fg("success", "✓ Updated step ") + theme.fg("accent", `#${details.step}`) };
+					return new Text(theme.fg("success", "✓ Updated step ") + theme.fg("accent", `#${details.step}`), 0, 0);
 				case "set_step_status":
-					return {
-						type: "text",
-						text: theme.fg("success", `✓ Step #${details.step} → `) + theme.fg("accent", String(details.status)),
-					};
+					return new Text(
+						theme.fg("success", `✓ Step #${details.step} → `) + theme.fg("accent", String(details.status)),
+						0, 0,
+					);
 				case "create_from_text":
-					return { type: "text", text: theme.fg("success", `✓ Created plan with ${details.count} steps`) };
+					return new Text(theme.fg("success", `✓ Created plan with ${details.count} steps`), 0, 0);
 				default:
-					return { type: "text", text: theme.fg("dim", String(action)) };
+					return new Text(theme.fg("dim", String(action)), 0, 0);
 			}
 		},
 	});
