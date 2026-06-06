@@ -159,11 +159,11 @@ declare module "@earendil-works/pi-coding-agent" {
 		newSession(options?: {
 			parentSession?: string;
 			setup?: (sm: SessionManager) => Promise<void>;
-			withSession?: (ctx: ExtensionCommandContext) => Promise<void>;
+			withSession?: (ctx: ReplacedSessionContext) => Promise<void>;
 		}): Promise<{ cancelled: boolean }>;
 		fork(entryId: string, options?: {
 			position?: "before" | "at";
-			withSession?: (ctx: ExtensionCommandContext) => Promise<void>;
+			withSession?: (ctx: ReplacedSessionContext) => Promise<void>;
 		}): Promise<{ cancelled: boolean }>;
 		navigateTree(targetId: string, options?: {
 			summarize?: boolean;
@@ -172,9 +172,30 @@ declare module "@earendil-works/pi-coding-agent" {
 			label?: string;
 		}): Promise<unknown>;
 		switchSession(sessionPath: string, options?: {
-			withSession?: (ctx: ExtensionCommandContext) => Promise<void>;
+			withSession?: (ctx: ReplacedSessionContext) => Promise<void>;
 		}): Promise<{ cancelled: boolean }>;
 		reload(): Promise<void>;
+	}
+
+	/**
+	 * Context passed to withSession callbacks after session replacement
+	 * (fork, newSession, switchSession). Extends ExtensionCommandContext
+	 * with sendMessage/sendUserMessage helpers bound to the replacement session.
+	 */
+	export interface ReplacedSessionContext extends ExtensionCommandContext {
+		sendMessage(message: {
+			customType: string;
+			content: string;
+			display: boolean;
+			details?: Record<string, unknown>;
+		}, options?: { triggerTurn?: boolean; deliverAs?: string }): void;
+
+		sendUserMessage(
+			content: string | Array<{ type: string; text?: string; source?: Record<string, unknown> }>,
+			options?: { deliverAs?: string },
+		): void;
+
+		setSessionName(name: string): void;
 	}
 
 	export interface ExtensionUI {
@@ -212,6 +233,8 @@ declare module "@earendil-works/pi-coding-agent" {
 		getBranch(): Array<{ type: string; message: AgentMessage }>;
 		getLeafId(): string | undefined;
 		getSessionFile(): string | undefined;
+		getSessionName(): string | undefined;
+		getHeader(): { version: number; id: string; timestamp: string; cwd: string; parentSession?: string } | undefined;
 		getLabel(entryId: string): string | undefined;
 	}
 }
