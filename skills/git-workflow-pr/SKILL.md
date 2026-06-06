@@ -1,6 +1,7 @@
-______________________________________________________________________
-
-## name: git-workflow-pr description: Complete git workflow with GitHub PR requirements — branch discipline, committing, pushing with user confirmation, and pull request lifecycle management.
+---
+name: git-workflow-pr
+description: 'Complete git workflow with GitHub PR requirements — branch discipline, committing, pushing with user confirmation, and pull request lifecycle management.'
+---
 
 Use this skill for the full git lifecycle: starting work from `main`, creating feature branches, committing changes, pushing with user approval, creating pull requests on GitHub, managing reviews, and merging.
 

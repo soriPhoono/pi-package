@@ -1,6 +1,7 @@
-______________________________________________________________________
-
-## name: sequential-thinking description: Structured problem-solving via the sequential thinking tool — mandatory methodology for breaking down complex tasks, debugging, design decisions, planning, and any analysis beyond a simple lookup.
+---
+name: sequential-thinking
+description: 'Structured problem-solving via the sequential thinking tool — mandatory methodology for breaking down complex tasks, debugging, design decisions, planning, and any analysis beyond a simple lookup.'
+---
 
 Use this skill whenever you face a non-trivial task — anything involving multiple steps, trade-offs, debugging, design decisions, planning, or analysis that requires more than a single action. **This is not optional for complex work.**
 
