@@ -47,19 +47,26 @@ const ICON = {
 
 export default function (pi: ExtensionAPI) {
 	let cmdRegistered = false;
+	let footerInstalled = false;
 
 	pi.on("session_start", async (_event, ctx) => {
 		// ── Toggle command (registered once globally) ────────────────
 		if (!cmdRegistered) {
 			cmdRegistered = true;
+
+			// Track whether the custom footer is currently installed.
+			// ctx2.ui.setFooter.length always returns 1 (the function's arity),
+			// so we cannot use that to check state. Track it explicitly instead.
 			pi.registerCommand("catppuccin-footer", {
 				description: "Toggle the Catppuccin custom footer on/off",
 				handler: async (_args, ctx2) => {
-					if (ctx2.ui.setFooter.length > 0) {
+					if (footerInstalled) {
 						ctx2.ui.setFooter(undefined);
+						footerInstalled = false;
 						ctx2.ui.notify(`${ICON.check} Default footer restored`, "info");
 					} else {
 						installFooter(ctx2);
+						footerInstalled = true;
 						ctx2.ui.notify(`${ICON.bolt} Catppuccin footer enabled`, "info");
 					}
 				},
@@ -67,6 +74,7 @@ export default function (pi: ExtensionAPI) {
 		}
 
 		installFooter(ctx);
+		footerInstalled = true;
 	});
 }
 

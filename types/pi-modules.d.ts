@@ -86,6 +86,27 @@ declare module "@earendil-works/pi-coding-agent" {
 		setLabel(entryId: string, label: string | undefined): void;
 	}
 
+	export function createBashTool(cwd: string, options?: {
+		spawnHook?: (opts: { command: string; cwd: string; env: Record<string, string | undefined> }) => {
+			command: string;
+			cwd: string;
+			env: Record<string, string | undefined>;
+		};
+	}): BashTool;
+
+	export interface BashTool {
+		name: string;
+		label: string;
+		description: string;
+		parameters: unknown;
+		execute(
+			toolCallId: string,
+			params: { command: string; timeout?: number },
+			signal: AbortSignal | undefined,
+			onUpdate: ((update: { content?: unknown[]; details?: Record<string, unknown> }) => void) | undefined,
+		): Promise<{ content: Array<{ type: string; text: string }>; details: Record<string, unknown>; isError?: boolean }>;
+	}
+
 	export interface ToolDefinition {
 		name: string;
 		label?: string;
@@ -104,7 +125,7 @@ declare module "@earendil-works/pi-coding-agent" {
 		renderCall?(args: Record<string, unknown>, theme: Theme, context: unknown): unknown;
 		renderResult?(
 			result: { content: Array<{ type: string; text: string }>; details?: Record<string, unknown> },
-			options: { expanded: boolean },
+			options: { expanded: boolean; isPartial: boolean },
 			theme: Theme,
 			context: unknown,
 		): unknown;

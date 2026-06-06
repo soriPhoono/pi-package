@@ -18,8 +18,22 @@ This file provides context for the pi coding agent when working in this reposito
     │   ├── safe-bash.ts             # Safe bash extension (permission gating)
     │   └── mcp.ts                   # MCP (Model Context Protocol) extension
     ├── skills/                      # Agent skill directories
-    │   └── example-skill/
-    │       └── SKILL.md             # Skill definition for scaffolding pi packages
+    │   ├── example-skill/
+    │   │   └── SKILL.md             # Skill definition for scaffolding pi packages
+    │   ├── plan-mode/
+    │   │   └── SKILL.md             # Plan Mode extension usage guide
+    │   ├── git-worktrees/
+    │   │   └── SKILL.md             # Git worktree best practices
+    │   ├── knowledge-graph-model/
+    │   │   └── SKILL.md             # Knowledge graph conceptual model
+    │   ├── knowledge-graph-operations/
+    │   │   └── SKILL.md             # Knowledge graph tool usage & lifecycle
+    │   ├── sequential-thinking/
+    │   │   └── SKILL.md             # Structured problem-solving via sequential thinking
+    │   ├── research-requirements/
+    │   │   └── SKILL.md             # Mandatory research protocol — Exa + Context7
+    │   └── git-workflow-pr/
+    │       └── SKILL.md             # Complete git workflow with GitHub PR lifecycle
     ├── prompts/                     # Markdown prompt templates
     │   └── review.md                # Code review prompt template
     └── themes/                      # Color theme JSON files
@@ -66,18 +80,21 @@ Connects to [MCP (Model Context Protocol)](https://modelcontextprotocol.io) serv
 **Configuration**: Copy `.pi/mcp.example.json` to `~/.pi/agent/mcp.json` (user-wide) or `.pi/mcp.json` (project-local) and configure your servers. Uses the same format as Claude Desktop's `mcpServers`.
 
 **Supported transports**:
+
 - **stdio**: `command` + `args` to spawn a local MCP server process
 - **SSE/Streamable HTTP**: `url` + `transport` for remote MCP servers
 
 **Tool naming**: MCP tools are registered as `{serverName}_{toolName}` (e.g., `filesystem_read`).
 
 **Commands**:
+
 - `/mcp` — List connected MCP servers, their tools, and status
 - `/mcp reconnect` — Reconnect all servers
 - `/mcp reconnect <name>` — Reconnect a specific server
 - `/mcp reload` — Reload config from disk and reconnect all
 
 **Limitations**:
+
 - Tools are only registered at connection time. To pick up new tools from a server, use `/mcp reconnect`.
 - `pi.registerTool()` has no removal API, so tools from disconnected servers persist until `/reload` or session restart.
 
@@ -86,6 +103,7 @@ Connects to [MCP (Model Context Protocol)](https://modelcontextprotocol.io) serv
 Read-only exploration mode for safe code analysis. When enabled, only read-only tools are available and bash is restricted to allowlisted commands.
 
 **Features**:
+
 - `/plan` command or `Ctrl+Alt+P` to toggle plan mode
 - `/todos` command to show current plan progress
 - `--plan` CLI flag to start in plan mode
@@ -96,12 +114,13 @@ Read-only exploration mode for safe code analysis. When enabled, only read-only 
 - Session persistence (state survives session resume)
 
 **Workflow**:
+
 1. Enable plan mode with `/plan` or `--plan` flag
-2. Ask the agent to analyze code and create a numbered plan under a `Plan:` header
-3. The agent outputs a plan with read-only tools
-4. Choose "Execute the plan" when prompted
-5. During execution, the agent marks steps complete with `[DONE:n]` tags
-6. Progress widget shows completion status
+1. Ask the agent to analyze code and create a numbered plan under a `Plan:` header
+1. The agent outputs a plan with read-only tools
+1. Choose "Execute the plan" when prompted
+1. During execution, the agent marks steps complete with `[DONE:n]` tags
+1. Progress widget shows completion status
 
 **Restricted tools in plan mode**: `read`, `bash`, `grep`, `find`, `ls`, `questionnaire`
 
@@ -129,16 +148,16 @@ Read-only exploration mode for safe code analysis. When enabled, only read-only 
 ## Development Workflow
 
 1. **Edit** source files in the appropriate `.pi/` subdirectory
-2. **Reload** changes in pi with the `/reload` command (no restart needed)
-3. **Verify** the new command, tool, or skill works as expected
-4. **Test** TypeScript changes with `tsc --noEmit` if desired
+1. **Reload** changes in pi with the `/reload` command (no restart needed)
+1. **Verify** the new command, tool, or skill works as expected
+1. **Test** TypeScript changes with `tsc --noEmit` if desired
 
 ## Common Tasks
 
 | Task | What to do |
 |------|-----------|
 | **Add a new extension** | Create `.pi/extensions/<name>.ts` following the `ExtensionAPI` factory pattern |
-| **Add a new skill** | Create `.pi/skills/<name>/SKILL.md` with YAML frontmatter |
+| **Add a new skill** | Create `skills/<name>/SKILL.md` with YAML frontmatter (name, description) |
 | **Add a new prompt template** | Create `.pi/prompts/<name>.md` with Markdown content |
 | **Add a new theme** | Create `.pi/themes/<name>.json` with all 51 color tokens |
 | **Update manifest** | Modify `pi` key in `.pi/package.json` if a resource is at a non-standard path |

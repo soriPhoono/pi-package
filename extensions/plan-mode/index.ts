@@ -40,7 +40,7 @@
  */
 
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { Key, Text, truncateToWidth } from "@earendil-works/pi-tui";
+import { Key, matchesKey, Text, truncateToWidth } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 import { StringEnum } from "@earendil-works/pi-ai";
 import type { AgentMessage } from "@earendil-works/pi-agent-core";
@@ -174,31 +174,68 @@ export default function planModeExtension(pi: ExtensionAPI): void {
 				let cachedWidth: number | undefined;
 				let cachedLines: string[] | undefined;
 
+				// TUI auto-calls requestRender() after handleInput
 				function handleInput(data: string): void {
-					if (data === "\r" || data === "\n" || (data.length === 1 && data.charCodeAt(0) === 13)) {
+					// Enter / Space: toggle completed/pending
+					if (matchesKey(data, Key.enter) || matchesKey(data, " ")) {
 						if (todoItems[cursorIndex]) {
 							const item = todoItems[cursorIndex];
 							item.status = item.status === "completed" ? "pending" : "completed";
 							updateStatus(ctx);
 							persistState();
 							cachedLines = undefined;
-							(_tui as { requestRender?: () => void }).requestRender?.();
 						}
 						return;
 					}
-					if (data === "\x1b[A" || data === "\x1bOA") {
+
+					// Arrow keys: navigate
+					if (matchesKey(data, Key.up)) {
 						cursorIndex = Math.max(0, cursorIndex - 1);
 						cachedLines = undefined;
-						(_tui as { requestRender?: () => void }).requestRender?.();
 						return;
 					}
-					if (data === "\x1b[B" || data === "\x1bOB") {
+					if (matchesKey(data, Key.down)) {
 						cursorIndex = Math.min(todoItems.length - 1, cursorIndex + 1);
 						cachedLines = undefined;
-						(_tui as { requestRender?: () => void }).requestRender?.();
 						return;
 					}
-					if (data === "\x1b" || data === "\x03") {
+
+					// 'i', 'w', or '~': toggle in_progress/pending
+					if (data === "i" || data === "w" || data === "~") {
+						if (todoItems[cursorIndex]) {
+							const item = todoItems[cursorIndex];
+							item.status = item.status === "in_progress" ? "pending" : "in_progress";
+							updateStatus(ctx);
+							persistState();
+							cachedLines = undefined;
+						}
+						return;
+					}
+
+					// 'c' or 'x': mark as completed
+					if (data === "c" || data === "x") {
+						if (todoItems[cursorIndex]) {
+							todoItems[cursorIndex].status = "completed";
+							updateStatus(ctx);
+							persistState();
+							cachedLines = undefined;
+						}
+						return;
+					}
+
+					// 'p': mark as pending
+					if (data === "p") {
+						if (todoItems[cursorIndex]) {
+							todoItems[cursorIndex].status = "pending";
+							updateStatus(ctx);
+							persistState();
+							cachedLines = undefined;
+						}
+						return;
+					}
+
+					// Escape or Ctrl+C: close dialog
+					if (matchesKey(data, Key.escape) || matchesKey(data, "ctrl+c")) {
 						done();
 					}
 				}
@@ -244,7 +281,7 @@ export default function planModeExtension(pi: ExtensionAPI): void {
 					}
 
 					lines.push("");
-					add(theme.fg("dim", " ↑↓ navigate · Enter toggle · Esc close"));
+					add(theme.fg("dim", " ↑↓ nav · Enter/Space toggle · i/w in-prog · Esc close"));
 					add(theme.fg("accent", "─".repeat(width)));
 
 					cachedLines = lines;
@@ -255,6 +292,8 @@ export default function planModeExtension(pi: ExtensionAPI): void {
 					render,
 					invalidate: () => { cachedLines = undefined; },
 					handleInput,
+					// Cleanup on close
+					dispose: () => { cachedLines = undefined; },
 				};
 			});
 		},
