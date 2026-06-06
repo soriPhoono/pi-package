@@ -23,7 +23,7 @@
  */
 
 import type { AssistantMessage } from "@earendil-works/pi-ai";
-import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
+import type { ExtensionAPI, ExtensionContext, Theme } from "@earendil-works/pi-coding-agent";
 import { truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
 
 // ── Nerd Font Icons ──────────────────────────────────────────────────────────
@@ -79,7 +79,15 @@ export default function (pi: ExtensionAPI) {
 }
 
 function installFooter(ctx: ExtensionContext): void {
-	ctx.ui.setFooter((tui, theme, footerData) => {
+	ctx.ui.setFooter((
+		tui: { requestRender(): void },
+		theme: Theme,
+		footerData: {
+			getGitBranch(): string | undefined;
+			getExtensionStatuses(): Map<string, string>;
+			onBranchChange(cb: () => void): () => void;
+		},
+	) => {
 		const unsubBranch = footerData.onBranchChange(() => tui.requestRender());
 
 		return {
