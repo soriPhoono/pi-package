@@ -1,6 +1,7 @@
-______________________________________________________________________
-
-## name: git-worktrees description: Guide for the proper use of git worktrees — managing multiple working directories from a single repository for parallel development, hotfixes, code review, and AI agent isolation.
+---
+name: git-worktrees
+description: 'Guide for the proper use of git worktrees — managing multiple working directories from a single repository for parallel development, hotfixes, code review, and AI agent isolation.'
+---
 
 Use this skill when working with multiple branches simultaneously, handling urgent hotfixes while mid-feature, reviewing PRs without disrupting current work, or setting up isolated environments for AI coding agents.
 

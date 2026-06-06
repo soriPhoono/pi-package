@@ -1,6 +1,7 @@
-______________________________________________________________________
-
-## name: research-requirements description: Mandatory research protocol before touching external software — using Exa for web context and Context7 for official documentation to eliminate assumptions and guesswork.
+---
+name: research-requirements
+description: 'Mandatory research protocol before touching external software — using Exa for web context and Context7 for official documentation to eliminate assumptions and guesswork.'
+---
 
 Use this skill **before every change involving external software, libraries, SDKs, APIs, packages, dependencies, or configuration formats.** Never rely on assumptions, outdated knowledge, or guesswork.
 

@@ -1,6 +1,7 @@
-______________________________________________________________________
-
-## name: knowledge-graph-operations description: Practical guide for reading, writing, and maintaining the persistent knowledge graph memory — tool reference, session lifecycle, and usage patterns.
+---
+name: knowledge-graph-operations
+description: 'Practical guide for reading, writing, and maintaining the persistent knowledge graph memory — tool reference, session lifecycle, and usage patterns.'
+---
 
 Use this skill when reading or writing to the knowledge graph, managing session context, deciding which tool to use for a memory operation, or following the knowledge lifecycle.
 

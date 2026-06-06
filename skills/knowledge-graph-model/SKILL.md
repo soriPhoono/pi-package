@@ -1,6 +1,7 @@
-______________________________________________________________________
-
-## name: knowledge-graph-model description: Conceptual model of the persistent knowledge graph memory — entities, relations, observations, naming conventions, and what data belongs where.
+---
+name: knowledge-graph-model
+description: 'Conceptual model of the persistent knowledge graph memory — entities, relations, observations, naming conventions, and what data belongs where.'
+---
 
 Use this skill when deciding how to structure information in the knowledge graph, what type of data to store, or how to name entities for consistency.
 
