@@ -1,12 +1,12 @@
 /**
  * Safe Bash Extension
  *
- * Overrides the built-in `bash` tool with a safer version that asks for
- * permission before running dangerous commands. Provides a `/safe-bash`
- * command to manage configuration.
+ * Provides safety checks for bash commands by prompting for confirmation
+ * before running dangerous commands. Uses the `tool_call` event to check
+ * commands before execution.
  *
  * How it works:
- * - Delegates actual execution to the built-in bash implementation
+ * - Listens to `tool_call` events for bash commands
  * - Scans each command against configurable dangerous patterns with
  *   three severity levels: "critical", "warn", and "info"
  * - Prompts the user for confirmation when a dangerous command is detected
@@ -32,8 +32,6 @@
  */
 
 import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
-import { createBashTool } from "@earendil-works/pi-coding-agent";
-import { Type } from "typebox";
 import {
   DangerPattern,
   Severity,
@@ -45,14 +43,6 @@ import {
   deserializePattern,
 } from "./patterns.ts";
 import { SafeBashStore } from "./persistence.ts";
-import { renderBashCall, renderBashResult, SafeBashResultDetails } from "./renderer.ts";
-
-// ── Bash parameter schema (same as built-in) ──────────────────────────
-
-const bashParameters = Type.Object({
-  command: Type.String({ description: "Bash command to execute" }),
-  timeout: Type.Optional(Type.Number({ description: "Timeout in seconds (optional, no default timeout)" })),
-});
 
 // ── Extension ─────────────────────────────────────────────────────────
 
@@ -60,9 +50,6 @@ export default function (pi: ExtensionAPI) {
   // ── State ────────────────────────────────────────────────────────
   const store = new SafeBashStore();
   let minSeverity: Severity = DEFAULT_MIN_SEVERITY;
-
-  // Underlying bash implementation (all the real work)
-  const realBash = createBashTool(process.cwd());
 
   // ── Helpers ──────────────────────────────────────────────────────
 
@@ -111,103 +98,35 @@ export default function (pi: ExtensionAPI) {
     }
   });
 
-  // ── Override the bash tool ──────────────────────────────────────
+  // ── Permission check before tool execution ───────────────────────
 
-  pi.registerTool({
-    ...realBash,
+  pi.on("tool_call", async (event, ctx) => {
+    if (event.toolName !== "bash") return undefined;
 
-    name: "bash",
-    label: "bash (safe)",
+    const command = event.input.command as string;
+    const activePatterns = getActivePatterns();
+    const match = !store.isAllowlisted(command)
+      ? findMatchingPattern(command, activePatterns)
+      : undefined;
 
-    description:
-      "Execute a bash command. This tool has built-in safety checks that ask for " +
-      "confirmation before running potentially dangerous commands (e.g., rm -rf /, " +
-      "sudo, disk operations, system control). Use /safe-bash to configure.",
+    if (match) {
+      const decision = await requestPermission(command, match, ctx);
 
-    promptSnippet: "Execute bash commands with safety confirmation for dangerous operations",
-    promptGuidelines: [
-      "Use bash to execute shell commands, run scripts, and interact with the system.",
-      "The safe-bash extension will prompt for confirmation before executing potentially dangerous commands like rm -rf, sudo, dd, mkfs, shutdown, piped shell installs, and more.",
-    ],
-
-    parameters: bashParameters,
-
-    renderCall(args: any, theme: any) {
-      return renderBashCall(args, theme);
-    },
-
-    renderResult(result: any, options: { expanded: boolean; isPartial: boolean }, theme: any) {
-      return renderBashResult(result, options, theme);
-    },
-
-    async execute(
-      toolCallId: string,
-      params: { command: string; timeout?: number },
-      signal: AbortSignal | undefined,
-      onUpdate: ((update: { content?: unknown[]; details?: Record<string, unknown> }) => void) | undefined,
-      ctx: { hasUI: boolean; ui: { select: (title: string, options: string[]) => Promise<string | undefined>; notify: (msg: string, level: "info" | "warning" | "error") => void } },
-    ) {
-      const command = params.command;
-      const startTime = Date.now();
-
-      // 1. Check for dangerous patterns
-      const activePatterns = getActivePatterns();
-      const match = !store.isAllowlisted(command)
-        ? findMatchingPattern(command, activePatterns)
-        : undefined;
-
-      if (match) {
-        // 2. Ask the user for permission
-        const decision = await requestPermission(command, match, ctx);
-
-        if (decision === "block") {
-          return {
-            content: [
-              {
-                type: "text",
-                text: [
-                  `❌ Command blocked by safe-bash extension.`,
-                  `   Pattern: ${match.label}`,
-                  `   Command: ${command}`,
-                  `   To allow this command, run again and choose "Allow once" or "Always allow for this session".`,
-                  `   To manage safety rules, use /safe-bash.`,
-                ].join("\n"),
-              },
-            ],
-            details: { blocked: true, command, reason: match.label } satisfies SafeBashResultDetails,
-            isError: true,
-          };
-        }
-
-        if (decision === "always") {
-          store.addToAllowlist(pi as unknown as ExtensionAPI, command);
-          ctx.ui.notify(`✅ "${match.label}" — allowed for this session`, "info");
-          return realBash.execute(toolCallId, params, signal, onUpdate).then((res: any) => ({
-            ...res,
-            details: { ...res.details, allowed: true, reason: match.label } satisfies SafeBashResultDetails,
-          }));
-        }
-
-        if (decision === "allow") {
-          ctx.ui.notify(`⚠️  "${match.label}" — allowed once`, "warning");
-          return realBash.execute(toolCallId, params, signal, onUpdate).then((res: any) => ({
-            ...res,
-            details: {
-              ...res.details,
-              warning: true,
-              reason: match.label,
-              elapsed: Date.now() - startTime,
-            } satisfies SafeBashResultDetails,
-          }));
-        }
+      if (decision === "block") {
+        return { block: true, reason: `Blocked by safe-bash: ${match.label}` };
       }
 
-      // 3. No match — execute normally
-      return realBash.execute(toolCallId, params, signal, onUpdate).then((res: any) => ({
-        ...res,
-        details: { ...res.details, elapsed: Date.now() - startTime } satisfies SafeBashResultDetails,
-      }));
-    },
+      if (decision === "always") {
+        store.addToAllowlist(pi, command);
+        ctx.ui.notify(`✅ "${match.label}" — allowed for this session`, "info");
+      }
+
+      if (decision === "allow") {
+        ctx.ui.notify(`⚠️  "${match.label}" — allowed once`, "warning");
+      }
+    }
+
+    return undefined;
   });
 
   // ── /safe-bash command ──────────────────────────────────────────
@@ -240,7 +159,7 @@ export default function (pi: ExtensionAPI) {
         const severityChoice = await ctx.ui.select("Severity level:", ["critical", "warn", "info"]);
         const severity: Severity = (severityChoice as Severity) ?? "warn";
 
-        store.addCustomPattern(pi as unknown as ExtensionAPI, { pattern: regex, label, severity });
+        store.addCustomPattern(pi, { pattern: regex, label, severity });
         ctx.ui.notify(`✅ Added pattern: ${label} (${severity})`, "info");
         return;
       }
@@ -271,7 +190,7 @@ export default function (pi: ExtensionAPI) {
         }
 
         const customIdx = idx - defaultsCount;
-        const removed = store.removeCustomPattern(pi as unknown as ExtensionAPI, customIdx);
+        const removed = store.removeCustomPattern(pi, customIdx);
         if (removed) {
           ctx.ui.notify(`🗑️  Removed custom pattern: ${removed.label}`, "info");
         }
@@ -279,7 +198,7 @@ export default function (pi: ExtensionAPI) {
       }
 
       if (subcommand === "clear") {
-        store.clearAllowlist(pi as unknown as ExtensionAPI);
+        store.clearAllowlist(pi);
         ctx.ui.notify("🧹 Session allowlist cleared", "info");
         return;
       }
@@ -331,7 +250,7 @@ export default function (pi: ExtensionAPI) {
           }
           if (Array.isArray(config.customPatterns)) {
             for (const sp of config.customPatterns) {
-              store.addCustomPattern(pi as unknown as ExtensionAPI, deserializePattern(sp));
+              store.addCustomPattern(pi, deserializePattern(sp));
             }
           }
           ctx.ui.notify("✅ Configuration imported successfully", "info");
